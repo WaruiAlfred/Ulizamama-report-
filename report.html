@@ -1,0 +1,842 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Outgoing Messages Analysis — UlizaMama</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+    <style>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        background: #1c1c1c;
+        color: #e8e6df;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        padding: 28px 32px;
+        min-height: 100vh;
+      }
+      h1 {
+        font-size: 26px;
+        font-weight: 700;
+        color: #e8e6df;
+        margin-bottom: 4px;
+      }
+      .subtitle {
+        font-size: 11px;
+        color: #888580;
+        margin-bottom: 28px;
+      }
+      .sec-title {
+        font-size: 13px;
+        font-weight: 700;
+        color: #e8e6df;
+        margin: 28px 0 10px;
+        padding-bottom: 8px;
+        border-bottom: 1px solid #333;
+      }
+      .kpi-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 10px;
+        margin-bottom: 6px;
+      }
+      .kpi {
+        background: #2d2d2d;
+        border: 0.5px solid #383838;
+        border-radius: 8px;
+        padding: 14px 16px;
+      }
+      .kpi-lbl {
+        font-size: 9px;
+        font-weight: 700;
+        color: #888580;
+        letter-spacing: 0.08em;
+        font-family: monospace;
+        margin-bottom: 6px;
+      }
+      .kpi-val {
+        font-size: 22px;
+        font-weight: 700;
+        line-height: 1.1;
+        margin-bottom: 4px;
+      }
+      .kpi-sub {
+        font-size: 10px;
+        color: #888580;
+      }
+      .charts-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+        margin-bottom: 6px;
+      }
+      .chart-card {
+        background: #252525;
+        border: 0.5px solid #383838;
+        border-radius: 8px;
+        padding: 14px;
+      }
+      .chart-card-full {
+        background: #252525;
+        border: 0.5px solid #383838;
+        border-radius: 8px;
+        padding: 14px;
+        margin-bottom: 6px;
+      }
+      .chart-title {
+        font-size: 10.5px;
+        font-weight: 700;
+        color: #e8e6df;
+        margin-bottom: 12px;
+      }
+      .chart-wrap {
+        position: relative;
+        width: 100%;
+      }
+      .insight {
+        background: #1e2c3a;
+        border: 1px solid #2a4a62;
+        border-radius: 8px;
+        padding: 12px 16px;
+        font-size: 9.5px;
+        color: #e8e6df;
+        line-height: 1.6;
+        margin-bottom: 6px;
+      }
+      .insight strong {
+        font-weight: 700;
+        color: #4a9ee0;
+      }
+      .pie-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+        margin-bottom: 6px;
+      }
+      .legend {
+        display: flex;
+        gap: 14px;
+        flex-wrap: wrap;
+        margin-top: 8px;
+        font-size: 10px;
+        color: #888580;
+      }
+      .leg {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+      }
+      .leg-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 2px;
+        flex-shrink: 0;
+      }
+      /* Tabs */
+      .tabs {
+        display: flex;
+        gap: 6px;
+        margin-bottom: 10px;
+      }
+      .tab {
+        padding: 6px 16px;
+        border-radius: 7px;
+        font-size: 11px;
+        font-weight: 700;
+        cursor: pointer;
+        border: none;
+        transition: all 0.15s;
+      }
+      .tab.active {
+        background: #1e2c3a;
+        color: #4a9ee0;
+        outline: 1px solid #4a9ee0;
+      }
+      .tab.inactive {
+        background: #2d2d2d;
+        color: #888580;
+        outline: 0.5px solid #383838;
+      }
+      /* Double KPI */
+      .dkpi-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 10px;
+        margin-bottom: 10px;
+      }
+      /* Findings */
+      .finding {
+        background: #2d2d2d;
+        border: 0.5px solid #383838;
+        border-radius: 8px;
+        padding: 12px 14px;
+        margin-bottom: 8px;
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        position: relative;
+        overflow: hidden;
+      }
+      .finding::before {
+        content: "";
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 4px;
+        border-radius: 8px 0 0 8px;
+      }
+      .finding.f1::before {
+        background: #2bae82;
+      }
+      .finding.f2::before {
+        background: #4a9ee0;
+      }
+      .finding.f3::before {
+        background: #f0a030;
+      }
+      .finding.f4::before {
+        background: #e24b4a;
+      }
+      .badge {
+        width: 26px;
+        height: 26px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 11px;
+        font-weight: 700;
+        color: #fff;
+        flex-shrink: 0;
+        margin-top: 1px;
+      }
+      .finding-body {
+        flex: 1;
+      }
+      .finding-title {
+        font-size: 10.5px;
+        font-weight: 700;
+        margin-bottom: 4px;
+      }
+      .f1 .finding-title {
+        color: #2bae82;
+      }
+      .f2 .finding-title {
+        color: #4a9ee0;
+      }
+      .f3 .finding-title {
+        color: #f0a030;
+      }
+      .f4 .finding-title {
+        color: #e24b4a;
+      }
+      .finding-text {
+        font-size: 9.5px;
+        color: #888580;
+        line-height: 1.6;
+      }
+      .badge-tag {
+        display: inline-block;
+        background: #f0a03030;
+        border: 0.8px solid #f0a030;
+        border-radius: 5px;
+        font-size: 9px;
+        font-weight: 700;
+        color: #f0a030;
+        padding: 2px 8px;
+        margin-left: 8px;
+        vertical-align: middle;
+      }
+      @media (max-width: 600px) {
+        .kpi-grid,
+        .dkpi-grid {
+          grid-template-columns: repeat(2, 1fr);
+        }
+        .charts-row,
+        .pie-row {
+          grid-template-columns: 1fr;
+        }
+        body {
+          padding: 16px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Outgoing Messages Analysis</h1>
+    <p class="subtitle">
+      UlizaMama (Instant Response) &amp; Helpdesk Agent Responses &nbsp;·&nbsp;
+      Dec 2024 – Feb 2025 &nbsp;·&nbsp; Salesforce Data
+    </p>
+
+    <div class="sec-title">Monthly volume overview</div>
+    <div class="kpi-grid">
+      <div class="kpi">
+        <div class="kpi-lbl">DEC TOTAL</div>
+        <div class="kpi-val" style="color: #4a9ee0">196,554</div>
+        <div class="kpi-sub">Base month</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-lbl">JAN TOTAL</div>
+        <div class="kpi-val" style="color: #2bae82">214,337</div>
+        <div class="kpi-sub">+9.1% vs Dec</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-lbl">FEB TOTAL</div>
+        <div class="kpi-val" style="color: #2bae82">214,645</div>
+        <div class="kpi-sub">+0.1% vs Jan</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-lbl">3-MONTH TOTAL</div>
+        <div class="kpi-val" style="color: #888580">625,536</div>
+        <div class="kpi-sub">All channels</div>
+      </div>
+    </div>
+
+    <div class="charts-row">
+      <div class="chart-card">
+        <div class="chart-title">Total outgoing messages by month</div>
+        <div class="chart-wrap" style="height: 200px">
+          <canvas
+            id="c-total"
+            role="img"
+            aria-label="Bar chart total outgoing Dec 196554 Jan 214337 Feb 214645"
+          ></canvas>
+        </div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">
+          Channel split by month (Agent vs Instant vs Double)
+        </div>
+        <div class="chart-wrap" style="height: 200px">
+          <canvas
+            id="c-split"
+            role="img"
+            aria-label="Stacked bar channel split by month"
+          ></canvas>
+        </div>
+        <div class="legend">
+          <span class="leg"
+            ><span class="leg-dot" style="background: #4a9ee0"></span
+            >Agent</span
+          >
+          <span class="leg"
+            ><span class="leg-dot" style="background: #2bae82"></span
+            >Instant</span
+          >
+          <span class="leg"
+            ><span class="leg-dot" style="background: #f0a030"></span
+            >Double</span
+          >
+        </div>
+      </div>
+    </div>
+
+    <div class="insight">
+      <strong>Key trend:</strong> Instant responses grew from 72,325 (Dec) →
+      93,045 (Jan) → 104,209 (Feb) — a <strong>44% increase</strong> over 3
+      months. Agent responses dropped sharply: 39,151 → 31,776 → 11,726 — a
+      <strong>70% reduction</strong>. UlizaMama is progressively handling a
+      larger share of conversations.
+    </div>
+
+    <div class="sec-title">Channel share evolution</div>
+    <div class="pie-row">
+      <div class="chart-card">
+        <div class="chart-title">Dec — response channel mix</div>
+        <div class="chart-wrap" style="height: 220px">
+          <canvas
+            id="pie-dec"
+            role="img"
+            aria-label="December pie: Agent 39151 Instant 72325 Double 7616"
+          ></canvas>
+        </div>
+        <div class="legend" style="justify-content: center">
+          <span class="leg"
+            ><span class="leg-dot" style="background: #4a9ee0"></span>Agent
+            39,151</span
+          >
+          <span class="leg"
+            ><span class="leg-dot" style="background: #2bae82"></span>Instant
+            72,325</span
+          >
+          <span class="leg"
+            ><span class="leg-dot" style="background: #f0a030"></span>Double
+            7,616</span
+          >
+        </div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Feb — response channel mix</div>
+        <div class="chart-wrap" style="height: 220px">
+          <canvas
+            id="pie-feb"
+            role="img"
+            aria-label="February pie: Agent 11726 Instant 104209 Double 2620"
+          ></canvas>
+        </div>
+        <div class="legend" style="justify-content: center">
+          <span class="leg"
+            ><span class="leg-dot" style="background: #4a9ee0"></span>Agent
+            11,726</span
+          >
+          <span class="leg"
+            ><span class="leg-dot" style="background: #2bae82"></span>Instant
+            104,209</span
+          >
+          <span class="leg"
+            ><span class="leg-dot" style="background: #f0a030"></span>Double
+            2,620</span
+          >
+        </div>
+      </div>
+    </div>
+
+    <div class="sec-title">Message part distribution</div>
+    <div class="tabs">
+      <button
+        class="tab active"
+        id="tab-instant"
+        onclick="switchTab('instant')"
+      >
+        Instant responses
+      </button>
+      <button class="tab inactive" id="tab-agent" onclick="switchTab('agent')">
+        Agent responses
+      </button>
+    </div>
+    <div class="chart-card-full">
+      <div class="chart-title" id="parts-title">
+        Instant response — message parts per reply (Dec / Jan / Feb)
+      </div>
+      <div class="chart-wrap" style="height: 260px">
+        <canvas
+          id="c-parts"
+          role="img"
+          aria-label="Message parts distribution by month"
+        ></canvas>
+      </div>
+      <div class="legend">
+        <span class="leg"
+          ><span class="leg-dot" style="background: #4a9ee0"></span>Dec</span
+        >
+        <span class="leg"
+          ><span class="leg-dot" style="background: #2bae82"></span>Jan</span
+        >
+        <span class="leg"
+          ><span class="leg-dot" style="background: #f0a030"></span>Feb</span
+        >
+      </div>
+    </div>
+
+    <div class="insight">
+      <strong>Multi-part messages:</strong> For instant responses, 3-part
+      replies are consistently the dominant format — 29,712 (Dec), 38,073 (Jan),
+      43,753 (Feb). Agent responses peak at 3-parts as well (14,237 / 11,510 /
+      4,266) but volumes are shrinking as agent workload reduces.
+    </div>
+
+    <div class="sec-title">
+      Double responses <span class="badge-tag">Overlap issue</span>
+    </div>
+    <div class="dkpi-grid">
+      <div class="kpi">
+        <div class="kpi-lbl">DEC DOUBLES</div>
+        <div class="kpi-val" style="color: #4a9ee0">7,616</div>
+        <div class="kpi-sub">3.9% of total</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-lbl">JAN DOUBLES</div>
+        <div class="kpi-val" style="color: #2bae82">3,383</div>
+        <div class="kpi-sub">1.6% of total</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-lbl">FEB DOUBLES</div>
+        <div class="kpi-val" style="color: #f0a030">2,620</div>
+        <div class="kpi-sub">1.2% of total</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-lbl">REDUCTION</div>
+        <div class="kpi-val" style="color: #e24b4a">−66%</div>
+        <div class="kpi-sub">Dec + Feb improvement</div>
+      </div>
+    </div>
+    <div class="chart-card-full">
+      <div class="chart-title">
+        Double response trend — same question answered by both agent &amp;
+        instant
+      </div>
+      <div class="chart-wrap" style="height: 180px">
+        <canvas
+          id="c-double"
+          role="img"
+          aria-label="Double response trend line"
+        ></canvas>
+      </div>
+    </div>
+    <div class="insight">
+      <strong>Overlap improvement:</strong> Double responses — where both an
+      agent and UlizaMama replied to the same question (sometimes with identical
+      content) — fell 66% from December to February. This indicates improving
+      routing logic or handoff controls, but the remaining ~2,620/month still
+      represents redundant messages worth investigating for user experience
+      impact.
+    </div>
+
+    <div class="sec-title">Channel share % trend</div>
+    <div class="chart-card-full">
+      <div class="chart-title">
+        % share of total outgoing — Instant vs Agent over time
+      </div>
+      <div class="chart-wrap" style="height: 220px">
+        <canvas
+          id="c-share"
+          role="img"
+          aria-label="Channel share percentage trend"
+        ></canvas>
+      </div>
+      <div class="legend">
+        <span class="leg"
+          ><span class="leg-dot" style="background: #2bae82"></span>Instant
+          (UlizaMama) %</span
+        >
+        <span class="leg"
+          ><span class="leg-dot" style="background: #4a9ee0"></span>Agent
+          %</span
+        >
+        <span class="leg"
+          ><span class="leg-dot" style="background: #f0a030"></span>Double
+          %</span
+        >
+      </div>
+    </div>
+
+    <div class="sec-title">Key findings summary</div>
+    <div class="finding f1">
+      <div class="badge" style="background: #2bae82">1</div>
+      <div class="finding-body">
+        <div class="finding-title">Instant Response is scaling</div>
+        <div class="finding-text">
+          UlizaMama went from handling 36.8% to 48.5% of all outgoing messages.
+          However instant responses are generated with up to 18-part responses
+          for a single question response.
+        </div>
+      </div>
+    </div>
+    <div class="finding f2">
+      <div class="badge" style="background: #4a9ee0">2</div>
+      <div class="finding-body">
+        <div class="finding-title">Agent load significantly reduced</div>
+        <div class="finding-text">
+          Agent-originated responses dropped from 39,151 to 11,726 — a 70% drop.
+          However a majority of agent responses are 3–4 part messages with
+          extremes of up to 22 parts.
+        </div>
+      </div>
+    </div>
+    <div class="finding f3">
+      <div class="badge" style="background: #f0a030">3</div>
+      <div class="finding-body">
+        <div class="finding-title">Double responses improving</div>
+        <div class="finding-text">
+          Concurrent responses from both channels are trending down 7,616 →
+          2,620, suggesting better routing controls. Although these responses go
+          out up-to-8-part double messages from both agent and instant
+          responses. Some of these double responses are sent out consecutively
+          without even being escalated by the mums.
+        </div>
+      </div>
+    </div>
+    <div class="finding f4">
+      <div class="badge" style="background: #e24b4a">4</div>
+      <div class="finding-body">
+        <div class="finding-title">3 and 4-part messages dominate</div>
+        <div class="finding-text">
+          Across both instant and agent responses, 3-part replies are the
+          majority format.
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const BLUE = "#4a9ee0",
+        GREEN = "#2bae82",
+        AMBER = "#f0a030",
+        RED = "#e24b4a";
+      const GRID = "rgba(255,255,255,0.06)",
+        TICK = "#888580";
+      const MONTHS = ["Dec", "Jan", "Feb"];
+
+      function baseOpts(stacked) {
+        return {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: (c) =>
+                  " " +
+                  (c.parsed.y !== undefined
+                    ? c.parsed.y.toLocaleString()
+                    : c.parsed.toLocaleString()),
+              },
+            },
+          },
+          scales: {
+            x: {
+              ticks: { color: TICK, font: { size: 10 } },
+              grid: { color: GRID },
+              stacked: !!stacked,
+            },
+            y: {
+              ticks: {
+                color: TICK,
+                font: { size: 10 },
+                callback: (v) => (v >= 1000 ? (v / 1000).toFixed(0) + "k" : v),
+              },
+              grid: { color: GRID },
+              stacked: !!stacked,
+            },
+          },
+        };
+      }
+
+      new Chart("c-total", {
+        type: "bar",
+        data: {
+          labels: MONTHS,
+          datasets: [
+            {
+              data: [196554, 214337, 214645],
+              backgroundColor: [BLUE, GREEN, "#5aa020"],
+              borderRadius: 3,
+            },
+          ],
+        },
+        options: baseOpts(),
+      });
+
+      new Chart("c-split", {
+        type: "bar",
+        data: {
+          labels: MONTHS,
+          datasets: [
+            {
+              data: [39151, 31776, 11726],
+              backgroundColor: BLUE,
+              borderRadius: 2,
+            },
+            {
+              data: [72325, 93045, 104209],
+              backgroundColor: GREEN,
+              borderRadius: 2,
+            },
+            {
+              data: [7616, 3383, 2620],
+              backgroundColor: AMBER,
+              borderRadius: 2,
+            },
+          ],
+        },
+        options: baseOpts(true),
+      });
+
+      function makePie(id, data) {
+        new Chart(id, {
+          type: "doughnut",
+          data: {
+            labels: ["Agent", "Instant", "Double"],
+            datasets: [
+              {
+                data,
+                backgroundColor: [BLUE, GREEN, AMBER],
+                hoverOffset: 4,
+                borderWidth: 0,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                callbacks: {
+                  label: (c) =>
+                    " " +
+                    c.label +
+                    ": " +
+                    c.parsed.toLocaleString() +
+                    " (" +
+                    Math.round(
+                      (c.parsed / data.reduce((a, b) => a + b, 0)) * 100,
+                    ) +
+                    "%)",
+                },
+              },
+            },
+          },
+        });
+      }
+      makePie("pie-dec", [39151, 72325, 7616]);
+      makePie("pie-feb", [11726, 104209, 2620]);
+
+      new Chart("c-double", {
+        type: "line",
+        data: {
+          labels: MONTHS,
+          datasets: [
+            {
+              data: [7616, 3383, 2620],
+              borderColor: AMBER,
+              backgroundColor: "rgba(240,160,48,0.12)",
+              fill: true,
+              tension: 0.4,
+              pointRadius: 6,
+              pointBackgroundColor: AMBER,
+              pointBorderWidth: 0,
+            },
+          ],
+        },
+        options: baseOpts(),
+      });
+
+      new Chart("c-share", {
+        type: "line",
+        data: {
+          labels: MONTHS,
+          datasets: [
+            {
+              label: "Instant %",
+              data: [36.8, 43.4, 48.5],
+              borderColor: GREEN,
+              backgroundColor: "rgba(43,174,130,0.1)",
+              fill: true,
+              tension: 0.4,
+              pointRadius: 5,
+              pointBackgroundColor: GREEN,
+              pointBorderWidth: 0,
+            },
+            {
+              label: "Agent %",
+              data: [19.9, 14.8, 5.5],
+              borderColor: BLUE,
+              backgroundColor: "rgba(74,158,224,0.1)",
+              fill: true,
+              tension: 0.4,
+              pointRadius: 5,
+              pointBackgroundColor: BLUE,
+              pointBorderWidth: 0,
+              borderDash: [],
+            },
+            {
+              label: "Double %",
+              data: [3.9, 1.6, 1.2],
+              borderColor: AMBER,
+              backgroundColor: "rgba(240,160,48,0.08)",
+              fill: true,
+              tension: 0.4,
+              pointRadius: 5,
+              pointBackgroundColor: AMBER,
+              pointBorderWidth: 0,
+              borderDash: [4, 3],
+            },
+          ],
+        },
+        options: {
+          ...baseOpts(),
+          scales: {
+            x: {
+              ticks: { color: TICK, font: { size: 10 } },
+              grid: { color: GRID },
+            },
+            y: {
+              ticks: {
+                color: TICK,
+                font: { size: 10 },
+                callback: (v) => v + "%",
+              },
+              grid: { color: GRID },
+              max: 58,
+            },
+          },
+        },
+      });
+
+      const partsData = {
+        instant: {
+          labels: [
+            "1-part",
+            "2-part",
+            "3-part",
+            "4-part",
+            "5-part",
+            "6-18 parts",
+          ],
+          dec: [430, 7193, 29712, 20549, 9539, 4904],
+          jan: [802, 9725, 38073, 26613, 12077, 5755],
+          feb: [1622, 10348, 43753, 27554, 14592, 6340],
+        },
+        agent: {
+          labels: [
+            "1-part",
+            "2-part",
+            "3-part",
+            "4-part",
+            "5-part",
+            "6-22 parts",
+          ],
+          dec: [4193, 3966, 14237, 9684, 4766, 2305],
+          jan: [3920, 2582, 11510, 7604, 4418, 1742],
+          feb: [1509, 1268, 4266, 2507, 1771, 326],
+        },
+      };
+
+      let partsChart = null;
+      function switchTab(type) {
+        document.getElementById("tab-instant").className =
+          "tab " + (type === "instant" ? "active" : "inactive");
+        document.getElementById("tab-agent").className =
+          "tab " + (type === "agent" ? "active" : "inactive");
+        document.getElementById("parts-title").textContent =
+          (type === "instant" ? "Instant response" : "Agent response") +
+          " — message parts per reply (Dec / Jan / Feb)";
+        const d = partsData[type];
+        if (partsChart) partsChart.destroy();
+        partsChart = new Chart("c-parts", {
+          type: "bar",
+          data: {
+            labels: d.labels,
+            datasets: [
+              {
+                label: "Dec",
+                data: d.dec,
+                backgroundColor: BLUE,
+                borderRadius: 2,
+              },
+              {
+                label: "Jan",
+                data: d.jan,
+                backgroundColor: GREEN,
+                borderRadius: 2,
+              },
+              {
+                label: "Feb",
+                data: d.feb,
+                backgroundColor: AMBER,
+                borderRadius: 2,
+              },
+            ],
+          },
+          options: baseOpts(),
+        });
+      }
+      switchTab("instant");
+    </script>
+  </body>
+</html>
